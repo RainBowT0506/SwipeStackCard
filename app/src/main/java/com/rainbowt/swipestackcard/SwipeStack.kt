@@ -29,7 +29,7 @@ fun SwipeStack(
     items: List<CardItem>,
     modifier: Modifier = Modifier,
     stackCount: Int = 3,
-    showAllCards: Boolean = false, // ✅ true: 有幾張顯示幾張；false: 固定顯示 stackCount(預設3)
+    showAllCards: Boolean = false, // true: 有幾張顯示幾張；false: 固定顯示 stackCount(預設3)
     onSwiped: (item: CardItem, direction: SwipeDirection) -> Unit = { _, _ -> }
 ) {
     if (items.isEmpty()) return
@@ -50,18 +50,18 @@ fun SwipeStack(
         // 拖曳進度 0..1
         val progress = (abs(offsetX.value) / threshold).coerceIn(0f, 1f)
 
-        // ✅ 實際顯示張數：開啟就全顯示，關閉就固定 stackCount
+        // 實際顯示張數：開啟就全顯示，關閉就固定 stackCount
         val visibleCount = if (showAllCards) items.size else stackCount
 
         // 從後往前畫，最上面最後畫
         val last = (topIndex + visibleCount - 1).coerceAtMost(items.lastIndex)
 
-        // ✅ 厚堆疊參數（想更厚就把 dx/dy 再加大）
-        val stackDx = 56f        // 每層往右偏移(px)
-        val stackDy = 44f        // 每層往下偏移(px)
+        // 厚堆疊參數（想更厚就把 dx/dy 再加大）
+        val stackDx = 36f        // 每層往右偏移(px)
+        val stackDy = 30f        // 每層往下偏移(px)
         val scaleStep = 0.025f   // 每層縮小幅度（不要太大，邊緣才露得出來）
-        val liftDx = 22f         // 拖曳時後面往左上頂的幅度(X)
-        val liftDy = 26f         // 拖曳時後面往左上頂的幅度(Y)
+        val liftDx = 44f         // 拖曳時後面往左上頂的幅度(X)
+        val liftDy = 52f         // 拖曳時後面往左上頂的幅度(Y)
         val liftScale = 0.04f    // 拖曳時後面放大幅度
 
         // 後卡視覺切層
@@ -97,7 +97,7 @@ fun SwipeStack(
             Card(
                 modifier = Modifier
                     .size(width = 320.dp, height = 200.dp)
-                    .zIndex((visibleCount - depth).toFloat()) // ✅ 用 visibleCount，避免 showAllCards 時層級怪
+                    .zIndex((visibleCount - depth).toFloat()) // 用 visibleCount，避免 showAllCards 時層級怪
                     .graphicsLayer {
                         translationX = transX
                         translationY = transY
