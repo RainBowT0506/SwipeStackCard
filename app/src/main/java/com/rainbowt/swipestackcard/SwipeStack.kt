@@ -13,9 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.rainbowt.swipestackcard.extension.loadWordsFromAssets
+import com.rainbowt.swipestackcard.model.WordItem
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
@@ -25,12 +28,13 @@ data class CardItem(val id: Int, val title: String)
 enum class SwipeDirection { Left, Right }
 
 @Composable
-fun SwipeStack(
-    items: List<CardItem>,
+fun <T> SwipeStack(
+    items: List<T>,
     modifier: Modifier = Modifier,
     stackCount: Int = 3,
-    showAllCards: Boolean = false, // true: 有幾張顯示幾張；false: 固定顯示 stackCount(預設3)
-    onSwiped: (item: CardItem, direction: SwipeDirection) -> Unit = { _, _ -> }
+    showAllCards: Boolean = false,
+    onSwiped: (item: T, direction: SwipeDirection) -> Unit = { _, _ -> },
+    cardContent: @Composable (item: T) -> Unit
 ) {
     if (items.isEmpty()) return
 
@@ -130,7 +134,8 @@ fun SwipeStack(
                                                 )
 
                                                 onSwiped(item, dir)
-                                                topIndex = (topIndex + 1).coerceAtMost(items.lastIndex)
+                                                topIndex =
+                                                    (topIndex + 1).coerceAtMost(items.lastIndex)
 
                                                 offsetX.snapTo(0f)
                                                 offsetY.snapTo(0f)
@@ -156,10 +161,7 @@ fun SwipeStack(
                 colors = CardDefaults.cardColors(containerColor = cardColor)
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "Card: ${item.title}",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    cardContent(item)
                 }
             }
         }
@@ -183,7 +185,15 @@ fun DemoSwipeStack() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(320.dp),
-            showAllCards = false
+            showAllCards = false,
+            cardContent = { item ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Card: ${item.title}",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            }
         )
 
         Text("showAllCards = true（有幾張顯示幾張）", style = MaterialTheme.typography.titleMedium)
@@ -192,7 +202,51 @@ fun DemoSwipeStack() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(320.dp),
-            showAllCards = true
+            showAllCards = true,
+            cardContent = { item ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Card: ${item.title}",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            }
         )
     }
+}
+
+@Preview
+@Composable
+fun LessonScreen() {
+    val context = LocalContext.current
+
+    val words by produceState<List<WordItem>>(initialValue = emptyList(), "第 1 課.json") {
+        value = loadWordsFromAssets(context, "第 1 課.json")
+    }
+
+    SwipeStack(
+        items = words,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(320.dp),
+        showAllCards = false,
+        onSwiped = { _, _ -> },
+        cardContent = { w ->
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(w.jp, style = MaterialTheme.typography.headlineLarge)
+                Spacer(Modifier.height(8.dp))
+                Text(w.kanji, style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.height(12.dp))
+                Text(w.zh, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(6.dp))
+                Text("${w.pos} · ${w.romaji}", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    )
 }
