@@ -28,7 +28,8 @@ enum class SwipeDirection { Left, Right }
 fun SwipeStack(
     items: List<CardItem>,
     modifier: Modifier = Modifier,
-    stackCount: Int = 4,
+    stackCount: Int = 3,
+    showAllCards: Boolean = false, // ✅ true: 有幾張顯示幾張；false: 固定顯示 stackCount(預設3)
     onSwiped: (item: CardItem, direction: SwipeDirection) -> Unit = { _, _ -> }
 ) {
     if (items.isEmpty()) return
@@ -46,21 +47,26 @@ fun SwipeStack(
         val offsetX = remember(topIndex) { Animatable(0f) }
         val offsetY = remember(topIndex) { Animatable(0f) }
 
+        // 拖曳進度 0..1
         val progress = (abs(offsetX.value) / threshold).coerceIn(0f, 1f)
 
-        val last = (topIndex + stackCount).coerceAtMost(items.lastIndex)
+        // ✅ 實際顯示張數：開啟就全顯示，關閉就固定 stackCount
+        val visibleCount = if (showAllCards) items.size else stackCount
 
-        // ✅ 厚堆疊參數（這組就是為了「很明顯」）
-        val stackDx = 56f        // 每層往右偏移(px)  ← 重點：大到能露出邊
+        // 從後往前畫，最上面最後畫
+        val last = (topIndex + visibleCount - 1).coerceAtMost(items.lastIndex)
+
+        // ✅ 厚堆疊參數（想更厚就把 dx/dy 再加大）
+        val stackDx = 56f        // 每層往右偏移(px)
         val stackDy = 44f        // 每層往下偏移(px)
-        val scaleStep = 0.025f   // 每層縮小幅度      ← 重點：縮放差不要太大
+        val scaleStep = 0.025f   // 每層縮小幅度（不要太大，邊緣才露得出來）
         val liftDx = 22f         // 拖曳時後面往左上頂的幅度(X)
         val liftDy = 26f         // 拖曳時後面往左上頂的幅度(Y)
         val liftScale = 0.04f    // 拖曳時後面放大幅度
 
-        // ✅ 後卡視覺切層（讓你一定看得到“疊”）
+        // 後卡視覺切層
         val strokeAlphaStep = 0.08f
-        val colorAlphaStep = 0.035f // 後面卡片稍微“灰”一點點即可
+        val colorAlphaStep = 0.035f
 
         for (i in last downTo topIndex) {
             val depth = i - topIndex
@@ -76,10 +82,10 @@ fun SwipeStack(
 
             val rotationZ = if (depth == 0) (offsetX.value / widthPx) * 12f else 0f
 
-            // ✅ 陰影層次（但不要靠它當主角）
+            // 陰影層次：最上層最厚，越後面越薄
             val elevationDp = (22 - depth * 5).coerceAtLeast(2).dp
 
-            // ✅ 讓後面卡片顏色略深 + 有邊框，堆疊會非常清楚
+            // 後面卡片顏色略深 + 有邊框
             val baseSurface = MaterialTheme.colorScheme.surface
             val cardColor =
                 if (depth == 0) baseSurface
@@ -91,7 +97,7 @@ fun SwipeStack(
             Card(
                 modifier = Modifier
                     .size(width = 320.dp, height = 200.dp)
-                    .zIndex((stackCount - depth).toFloat())
+                    .zIndex((visibleCount - depth).toFloat()) // ✅ 用 visibleCount，避免 showAllCards 時層級怪
                     .graphicsLayer {
                         translationX = transX
                         translationY = transY
@@ -122,8 +128,10 @@ fun SwipeStack(
                                                     targetX,
                                                     spring(stiffness = Spring.StiffnessMediumLow)
                                                 )
+
                                                 onSwiped(item, dir)
                                                 topIndex = (topIndex + 1).coerceAtMost(items.lastIndex)
+
                                                 offsetX.snapTo(0f)
                                                 offsetY.snapTo(0f)
                                             } else {
@@ -163,11 +171,28 @@ fun SwipeStack(
 fun DemoSwipeStack() {
     val items = remember { List(10) { CardItem(it, "Item $it") } }
 
-    SwipeStack(
-        items = items,
-        modifier = Modifier
+    Column(
+        Modifier
             .fillMaxWidth()
-            .height(320.dp),
-        stackCount = 4
-    )
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        Text("showAllCards = false（固定 3 張）", style = MaterialTheme.typography.titleMedium)
+        SwipeStack(
+            items = items,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(320.dp),
+            showAllCards = false
+        )
+
+        Text("showAllCards = true（有幾張顯示幾張）", style = MaterialTheme.typography.titleMedium)
+        SwipeStack(
+            items = items,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(320.dp),
+            showAllCards = true
+        )
+    }
 }
