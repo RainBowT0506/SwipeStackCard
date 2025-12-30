@@ -250,3 +250,102 @@ fun LessonScreen() {
         }
     )
 }
+
+private enum class WordFace {
+    JP,        // 日文
+    KANJI,     // 漢字
+    ZH,        // 中文
+    POS,       // 詞性
+    ROMAJI     // 羅馬拼音
+}
+
+@Preview
+@Composable
+fun SingleWordScreen(fileName: String = "第 1 課.json") {
+    val context = LocalContext.current
+
+    val words by produceState<List<WordItem>>(initialValue = emptyList(), fileName) {
+        value = loadWordsFromAssets(context, fileName)
+    }
+
+    if (words.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    // 目前第幾個單字
+    var wordIndex by remember { mutableIntStateOf(0) }
+    val word = words[wordIndex.coerceIn(0, words.lastIndex)]
+
+    // 這個單字要顯示的「所有卡片」
+    val faces = remember {
+        listOf(
+            WordFace.JP,
+            WordFace.KANJI,
+            WordFace.ZH,
+            WordFace.POS,
+            WordFace.ROMAJI
+        )
+    }
+
+    // 記錄這個單字已 swipe 幾張
+    var swipedCount by remember(wordIndex) { mutableIntStateOf(0) }
+
+    // 關鍵：wordIndex 變 → 整個 SwipeStack 重建
+    key(wordIndex) {
+        SwipeStack(
+            items = faces,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(320.dp),
+            stackCount = faces.size,
+            showAllCards = true, // 一個堆疊就顯示全部卡
+            onSwiped = { _, _ ->
+                swipedCount += 1
+                if (swipedCount >= faces.size) {
+                    // 這個單字的所有卡片都滑完了
+                    if (wordIndex < words.lastIndex) {
+                        wordIndex += 1
+                    } else {
+                        // 已是最後一個單字（你可以在這裡顯示完成畫面）
+                    }
+                }
+            },
+            cardContent = { face ->
+                WordCard(face = face, word = word)
+            }
+        )
+    }
+}
+
+@Composable
+private fun WordCard(
+    face: WordFace,
+    word: WordItem
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        when (face) {
+            WordFace.JP ->
+                Text(word.jp, style = MaterialTheme.typography.headlineLarge)
+
+            WordFace.KANJI ->
+                Text(word.kanji, style = MaterialTheme.typography.headlineLarge)
+
+            WordFace.ZH ->
+                Text(word.zh, style = MaterialTheme.typography.headlineMedium)
+
+            WordFace.POS ->
+                Text(word.pos, style = MaterialTheme.typography.titleLarge)
+
+            WordFace.ROMAJI ->
+                Text(word.romaji, style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
